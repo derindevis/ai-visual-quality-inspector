@@ -106,7 +106,7 @@ else:
                 if st.button("🗑️ Clear Login History"):
                     from sqlalchemy import text
                     engine = create_engine(
-                        "sqlite:///C:/Users/derin/OneDrive/Desktop/visual/database/inspections.db"
+                        "sqlite:///database/inspections.db"
                     )
                     with engine.connect() as conn:
                         conn.execute(text("DELETE FROM login_history"))
@@ -119,7 +119,7 @@ else:
                 if st.button("🗑️ Clear All Inspections"):
                     from sqlalchemy import text
                     engine = create_engine(
-                        "sqlite:///C:/Users/derin/OneDrive/Desktop/visual/database/inspections.db"
+                        "sqlite:///database/inspections.db"
                     )
                     with engine.connect() as conn:
                         conn.execute(text("DELETE FROM inspections"))
@@ -132,7 +132,7 @@ else:
                 if st.button("🗑️ Clear ALL Data"):
                     from sqlalchemy import text
                     engine = create_engine(
-                        "sqlite:///C:/Users/derin/OneDrive/Desktop/visual/database/inspections.db"
+                        "sqlite:///database/inspections.db"
                     )
                     with engine.connect() as conn:
                         conn.execute(text("DELETE FROM inspections"))
