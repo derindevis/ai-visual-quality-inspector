@@ -1,0 +1,13 @@
+venv/ 
+__pycache__/ 
+*.pyc 
+*.pyo
+runs/ 
+*.pt 
+database/
+archive/ 
+dataset/ 
+reports/ 
+*.zip 
+.DS_Store
+Thumbs.db
