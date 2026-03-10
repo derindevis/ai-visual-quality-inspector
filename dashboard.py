@@ -1,11 +1,16 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from sqlalchemy import create_engine
-from database import verify_password, save_login_history, get_user
+from sqlalchemy import create_engine, text
 from database import create_user, verify_password, save_login_history, get_user
+import os
 
-# Auto create default users if they don't exist
+# ── Database Helper ──
+def get_engine():
+    os.makedirs("database", exist_ok=True)
+    return create_engine("sqlite:///database/inspections.db")
+
+# ── Auto create default users ──
 create_user(
     username = "admin",
     name     = "Derin Devis",
@@ -21,14 +26,14 @@ create_user(
     role     = "viewer"
 )
 
-# Page config
+# ── Page config ──
 st.set_page_config(
     page_title="AI Quality Inspector Dashboard",
     page_icon="🔍",
     layout="wide"
 )
 
-# Session state
+# ── Session state ──
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
@@ -64,13 +69,11 @@ if not st.session_state.logged_in:
 else:
     @st.cache_data(ttl=5)
     def load_data():
-        engine = create_engine(
-            "sqlite:///C:/Users/derin/OneDrive/Desktop/visual/database/inspections.db"
-        )
+        engine = get_engine()
         df = pd.read_sql("SELECT * FROM inspections", engine)
         return df
 
-    # Header with user info
+    # Header
     col_title, col_user, col_logout = st.columns([6, 2, 1])
     with col_title:
         st.title("🏭 AI Visual Quality Inspection Dashboard")
@@ -88,82 +91,147 @@ else:
 
     st.markdown("---")
 
+    # ── ADMIN PANEL ──
     if st.session_state.role == "admin":
         with st.expander("👑 Admin Panel"):
-        
-            tab1, tab2, tab3 = st.tabs(["📝 Login History", "👤 Manage Users", "🗑️ Clear Data"])
-        
-        # Tab 1 - Login History
+            tab1, tab2, tab3, tab4 = st.tabs([
+                "📝 Login History",
+                "👤 Manage Users",
+                "🗑️ Clear Data",
+                "🔍 Inspection History"
+            ])
+
+            # Tab 1 - Login History
             with tab1:
-                engine = create_engine(
-                    "sqlite:///C:/Users/derin/OneDrive/Desktop/visual/database/inspections.db"
-                )
+                engine = get_engine()
                 login_df = pd.read_sql(
-                    "SELECT * FROM login_history ORDER BY login_time DESC LIMIT 20", 
+                    "SELECT * FROM login_history ORDER BY login_time DESC LIMIT 20",
                     engine
                 )
                 st.dataframe(login_df)
 
-        # Tab 2 - Manage Users
+            # Tab 2 - Manage Users
             with tab2:
-                engine = create_engine(
-                    "sqlite:///C:/Users/derin/OneDrive/Desktop/visual/database/inspections.db"
+                engine = get_engine()
+                users_df = pd.read_sql(
+                    "SELECT id, username, name, email, role, created_at, is_active FROM users",
+                    engine
                 )
-                users_df = pd.read_sql("SELECT id, username, name, email, role, created_at, is_active FROM users", engine)
                 st.dataframe(users_df)
 
-        # Tab 3 - Clear Data
+            # Tab 3 - Clear Data
             with tab3:
-             st.warning("⚠️ These actions are permanent and cannot be undone!")
-            
-            col_a, col_b, col_c = st.columns(3)
-            
-            with col_a:
-                st.markdown("**Clear Login History**")
-                if st.button("🗑️ Clear Login History"):
-                    from sqlalchemy import text
-                    engine = create_engine(
-                        "sqlite:///database/inspections.db"
-                    )
-                    with engine.connect() as conn:
-                        conn.execute(text("DELETE FROM login_history"))
-                        conn.commit()
-                    st.success("✅ Login history cleared!")
-                    st.rerun()
+                st.warning("⚠️ These actions are permanent and cannot be undone!")
+                col_a, col_b, col_c = st.columns(3)
 
-            with col_b:
-                st.markdown("**Clear Inspections**")
-                if st.button("🗑️ Clear All Inspections"):
-                    from sqlalchemy import text
-                    engine = create_engine(
-                        "sqlite:///database/inspections.db"
-                    )
-                    with engine.connect() as conn:
-                        conn.execute(text("DELETE FROM inspections"))
-                        conn.commit()
-                    st.success("✅ All inspections cleared!")
-                    st.rerun()
+                with col_a:
+                    st.markdown("**Clear Login History**")
+                    if st.button("🗑️ Clear Login History"):
+                        with get_engine().connect() as conn:
+                            conn.execute(text("DELETE FROM login_history"))
+                            conn.commit()
+                        st.success("✅ Login history cleared!")
+                        st.rerun()
 
-            with col_c:
-                st.markdown("**Clear Everything**")
-                if st.button("🗑️ Clear ALL Data"):
-                    from sqlalchemy import text
-                    engine = create_engine(
-                        "sqlite:///database/inspections.db"
+                with col_b:
+                    st.markdown("**Clear Inspections**")
+                    if st.button("🗑️ Clear All Inspections"):
+                        with get_engine().connect() as conn:
+                            conn.execute(text("DELETE FROM inspections"))
+                            conn.commit()
+                        st.success("✅ All inspections cleared!")
+                        st.rerun()
+
+                with col_c:
+                    st.markdown("**Clear Everything**")
+                    if st.button("🗑️ Clear ALL Data"):
+                        with get_engine().connect() as conn:
+                            conn.execute(text("DELETE FROM inspections"))
+                            conn.execute(text("DELETE FROM login_history"))
+                            conn.commit()
+                        st.success("✅ All data cleared!")
+                        st.rerun()
+
+            # Tab 4 - Inspection History
+            with tab4:
+                engine = get_engine()
+                col_f1, col_f2, col_f3 = st.columns(3)
+
+                with col_f1:
+                    filter_result = st.selectbox(
+                        "Filter by Result", ["All", "PASS", "FAIL"]
                     )
-                    with engine.connect() as conn:
-                        conn.execute(text("DELETE FROM inspections"))
-                        conn.execute(text("DELETE FROM login_history"))
-                        conn.commit()
-                    st.success("✅ All data cleared!")
-                    st.rerun()
+                with col_f2:
+                    filter_defect = st.selectbox(
+                        "Filter by Defect",
+                        ["All", "MT_Blowhole", "MT_Break",
+                         "MT_Crack", "MT_Fray", "MT_Free"]
+                    )
+                with col_f3:
+                    filter_severity = st.selectbox(
+                        "Filter by Severity",
+                        ["All", "HIGH 🔴", "MEDIUM 🟡", "LOW 🟢", "NONE ✅"]
+                    )
+
+                query = "SELECT * FROM inspections WHERE 1=1"
+                if filter_result != "All":
+                    query += f" AND result = '{filter_result}'"
+                if filter_defect != "All":
+                    query += f" AND defect_type = '{filter_defect}'"
+                if filter_severity != "All":
+                    query += f" AND severity = '{filter_severity}'"
+                query += " ORDER BY timestamp DESC"
+
+                inspect_df = pd.read_sql(query, engine)
+                st.markdown(f"**Found: {len(inspect_df)} records**")
+                st.dataframe(inspect_df)
+
+                st.markdown("---")
+                st.markdown("**Delete Single Record by ID:**")
+                col_d1, col_d2 = st.columns([2, 1])
+                with col_d1:
+                    delete_id = st.number_input(
+                        "Enter Inspection ID to delete",
+                        min_value=1, step=1
+                    )
+                with col_d2:
+                    st.markdown("##")
+                    if st.button("🗑️ Delete Record"):
+                        with get_engine().connect() as conn:
+                            conn.execute(
+                                text(f"DELETE FROM inspections WHERE id = {delete_id}")
+                            )
+                            conn.commit()
+                        st.success(f"✅ Record #{delete_id} deleted!")
+                        st.rerun()
+
+                st.markdown("---")
+                st.markdown("**Delete All Records of a Defect Type:**")
+                col_e1, col_e2 = st.columns([2, 1])
+                with col_e1:
+                    delete_type = st.selectbox(
+                        "Select Defect Type to Delete",
+                        ["MT_Blowhole", "MT_Break",
+                         "MT_Crack", "MT_Fray", "MT_Free"]
+                    )
+                with col_e2:
+                    st.markdown("##")
+                    if st.button("🗑️ Delete All of Type"):
+                        with get_engine().connect() as conn:
+                            conn.execute(
+                                text(f"DELETE FROM inspections WHERE defect_type = '{delete_type}'")
+                            )
+                            conn.commit()
+                        st.success(f"✅ All {delete_type} records deleted!")
+                        st.rerun()
 
     st.markdown("---")
 
+    # ── MAIN DASHBOARD ──
     df = load_data()
 
     if df.empty:
-        st.warning("No inspections yet!")
+        st.warning("No inspections yet! Run main.py to populate data.")
     else:
         # TOP METRICS
         col1, col2, col3, col4 = st.columns(4)
