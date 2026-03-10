@@ -1,0 +1,15 @@
+credentials:
+  usernames:
+    admin:
+      email: derindevis79@gmail.com
+      name: Derin Devis
+      password: $2b$12$M5Hj53gzyA5KlixRj.QAGeN9w4HLmrlBIH/wAmgMVHf6qgbJ4ToHu
+    viewer:
+      email: saurabhjijil@gmail.com
+      name: saurabh T.J
+      password: $2b$12$jMZ6guZ65L.WE/y7pqnixu7ygkF3Ly57PM1DAkZqh5MYRWWuut1S2
+
+cookie:
+  expiry_days: 1
+  key: ai_quality_inspector
+  name: auth_cookie
