@@ -3,6 +3,23 @@ import pandas as pd
 import plotly.express as px
 from sqlalchemy import create_engine
 from database import verify_password, save_login_history, get_user
+from database import create_user, verify_password, save_login_history, get_user
+
+# Auto create default users if they don't exist
+create_user(
+    username = "admin",
+    name     = "Derin Devis",
+    email    = "derindevis79@gmail.com",
+    password = "admin123",
+    role     = "admin"
+)
+create_user(
+    username = "viewer",
+    name     = "Viewer User",
+    email    = "viewer@gmail.com",
+    password = "viewer123",
+    role     = "viewer"
+)
 
 # Page config
 st.set_page_config(
