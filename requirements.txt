@@ -12,3 +12,5 @@ Pillow==12.1.1
 numpy==2.4.3
 scipy==1.17.1
 streamlit-authenticator==0.4.2
+python-dotenv==1.0.0
+psycopg2-binary==2.9.11
