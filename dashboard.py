@@ -3,6 +3,7 @@ import pandas as pd
 import plotly.express as px
 from sqlalchemy import create_engine, text
 from database import create_user, verify_password, save_login_history, get_user
+from webcam import webcam_page
 import os
 
 # ── Load Database URL ──
@@ -109,6 +110,19 @@ else:
             st.rerun()
 
     st.markdown("---")
+    # ── NAVIGATION ──
+    page = st.sidebar.radio(
+        "📌 Navigation",
+        ["📊 Dashboard", "📷 Live Detection"]
+    )
+
+    st.markdown("---")
+
+    if page == "📷 Live Detection":
+        webcam_page()
+        st.stop()
+
+    # ── ADMIN PANEL ──
 
     # ── ADMIN PANEL ──
     if st.session_state.role == "admin":
