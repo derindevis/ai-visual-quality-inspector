@@ -1,36 +1,69 @@
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime
-from sqlalchemy.orm import declarative_base, sessionmaker
 import datetime
 import os
-import datetime
+from dotenv import load_dotenv
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean
 from sqlalchemy.orm import declarative_base, sessionmaker
 
+# Load environment variables
+load_dotenv()
 
-# Create database
-os.makedirs("database", exist_ok=True)
-engine = create_engine("sqlite:///database/inspections.db", echo=False)
+# ── Database Connection ──
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+# Fallback to SQLite if no Supabase URL (for local testing)
+if not DATABASE_URL:
+    os.makedirs("database", exist_ok=True)
+    DATABASE_URL = "sqlite:///database/inspections.db"
+    print("⚠️ Using local SQLite database")
+else:
+    print("✅ Using Supabase cloud database")
+
+engine = create_engine(DATABASE_URL)
 Base = declarative_base()
+Session = sessionmaker(bind=engine)
 
-# Define table
+# ── Table 1: Inspections ──
 class Inspection(Base):
     __tablename__ = "inspections"
 
-    id              = Column(Integer, primary_key=True, autoincrement=True)
-    timestamp       = Column(DateTime, default=datetime.datetime.now)
-    image_name      = Column(String)
-    defect_type     = Column(String)
-    confidence      = Column(Float)
-    severity        = Column(String)
-    recommendation  = Column(String)
-    region          = Column(String)
-    result          = Column(String)  # PASS or FAIL
+    id             = Column(Integer, primary_key=True, autoincrement=True)
+    timestamp      = Column(DateTime, default=datetime.datetime.now)
+    image_name     = Column(String)
+    defect_type    = Column(String)
+    confidence     = Column(Float)
+    severity       = Column(String)
+    recommendation = Column(String)
+    region         = Column(String)
+    result         = Column(String)
 
-# Create table
+# ── Table 2: Users ──
+class User(Base):
+    __tablename__ = "users"
+
+    id         = Column(Integer, primary_key=True, autoincrement=True)
+    username   = Column(String, unique=True, nullable=False)
+    name       = Column(String, nullable=False)
+    email      = Column(String, nullable=False)
+    password   = Column(String, nullable=False)
+    role       = Column(String, default="viewer")
+    created_at = Column(DateTime, default=datetime.datetime.now)
+    is_active  = Column(Boolean, default=True)
+
+# ── Table 3: Login History ──
+class LoginHistory(Base):
+    __tablename__ = "login_history"
+
+    id         = Column(Integer, primary_key=True, autoincrement=True)
+    username   = Column(String, nullable=False)
+    login_time = Column(DateTime, default=datetime.datetime.now)
+    status     = Column(String)
+    ip_address = Column(String, default="localhost")
+
+# Create all tables
 Base.metadata.create_all(engine)
-Session = sessionmaker(bind=engine)
 
-def save_inspection(image_name, defect_type, confidence, 
+# ── Inspection Functions ──
+def save_inspection(image_name, defect_type, confidence,
                    severity, recommendation, region, result):
     session = Session()
     record = Inspection(
@@ -54,41 +87,15 @@ def get_all_inspections():
     session.close()
     return records
 
-class User(Base):
-    __tablename__ = "users"
-
-    id         = Column(Integer, primary_key=True, autoincrement=True)
-    username   = Column(String, unique=True, nullable=False)
-    name       = Column(String, nullable=False)
-    email      = Column(String, nullable=False)
-    password   = Column(String, nullable=False)  # hashed password
-    role       = Column(String, default="viewer") # admin or viewer
-    created_at = Column(DateTime, default=datetime.datetime.now)
-    is_active  = Column(Boolean, default=True)
-
-class LoginHistory(Base):
-    __tablename__ = "login_history"
-
-    id         = Column(Integer, primary_key=True, autoincrement=True)
-    username   = Column(String, nullable=False)
-    login_time = Column(DateTime, default=datetime.datetime.now)
-    status     = Column(String)  # SUCCESS or FAILED
-    ip_address = Column(String, default="localhost")
-
-# Update create_all to include new tables
-Base.metadata.create_all(engine)
-
-# ── User Management Functions ──
+# ── User Functions ──
 def create_user(username, name, email, password, role="viewer"):
     import bcrypt
     session = Session()
-    # Check if user already exists
     existing = session.query(User).filter_by(username=username).first()
     if existing:
         print(f"⚠️ User {username} already exists!")
         session.close()
         return False
-    # Hash password
     hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
     user = User(
         username   = username,

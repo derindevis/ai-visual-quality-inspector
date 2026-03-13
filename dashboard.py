@@ -4,6 +4,13 @@ import plotly.express as px
 from sqlalchemy import create_engine, text
 from database import create_user, verify_password, save_login_history, get_user
 import os
+from dotenv import load_dotenv
+load_dotenv()
+if "DATABASE_URL" not in os.environ:
+    try:
+        os.environ["DATABASE_URL"] = st.secrets["DATABASE_URL"]
+    except:
+        pass
 
 # ── Database Helper ──
 def get_engine():
