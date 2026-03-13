@@ -4,18 +4,30 @@ import plotly.express as px
 from sqlalchemy import create_engine, text
 from database import create_user, verify_password, save_login_history, get_user
 import os
-from dotenv import load_dotenv
-load_dotenv()
-if "DATABASE_URL" not in os.environ:
-    try:
-        os.environ["DATABASE_URL"] = st.secrets["DATABASE_URL"]
-    except:
-        pass
 
-# ── Database Helper ──
+# ── Load Database URL ──
+# Support both local .env and Streamlit Cloud secrets
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except:
+    pass
+
+def get_db_url():
+    # Try local .env first
+    url = os.environ.get("DATABASE_URL")
+    if url:
+        return url
+    # Try Streamlit secrets
+    try:
+        return st.secrets["DATABASE_URL"]
+    except:
+        # Fallback to SQLite
+        os.makedirs("database", exist_ok=True)
+        return "sqlite:///database/inspections.db"
+
 def get_engine():
-    os.makedirs("database", exist_ok=True)
-    return create_engine("sqlite:///database/inspections.db")
+    return create_engine(get_db_url())
 
 # ── Auto create default users ──
 create_user(
@@ -108,7 +120,6 @@ else:
                 "🔍 Inspection History"
             ])
 
-            # Tab 1 - Login History
             with tab1:
                 engine = get_engine()
                 login_df = pd.read_sql(
@@ -117,7 +128,6 @@ else:
                 )
                 st.dataframe(login_df)
 
-            # Tab 2 - Manage Users
             with tab2:
                 engine = get_engine()
                 users_df = pd.read_sql(
@@ -126,7 +136,6 @@ else:
                 )
                 st.dataframe(users_df)
 
-            # Tab 3 - Clear Data
             with tab3:
                 st.warning("⚠️ These actions are permanent and cannot be undone!")
                 col_a, col_b, col_c = st.columns(3)
@@ -159,7 +168,6 @@ else:
                         st.success("✅ All data cleared!")
                         st.rerun()
 
-            # Tab 4 - Inspection History
             with tab4:
                 engine = get_engine()
                 col_f1, col_f2, col_f3 = st.columns(3)
@@ -240,7 +248,6 @@ else:
     if df.empty:
         st.warning("No inspections yet! Run main.py to populate data.")
     else:
-        # TOP METRICS
         col1, col2, col3, col4 = st.columns(4)
         total     = len(df)
         passed    = len(df[df["result"] == "PASS"])
